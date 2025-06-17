@@ -28,10 +28,11 @@ import {
 import { useCategories } from "@/hooks/useCategories";
 import { useSubCategories } from "@/hooks/useSubCategories";
 
-export default function FilterMenu() {
-  const [activeFilters, setActiveFilters] = useState(2);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedView, setSelectedView] = useState("");
+export default function FilterMenu({
+  onApply,
+}: {
+  onApply?: (filters: any) => void;
+}) {
   const [priceRange, setPriceRange] = useState([0, 1000]);
   const { categories } = useCategories();
   const { subCategories } = useSubCategories();
@@ -101,16 +102,43 @@ export default function FilterMenu() {
     setStatusFilters((prev) => ({ ...prev, [status]: checked }));
   };
 
-  const handleCategoryChange = (category: string, checked: boolean) => {
-    setCategoryFilters((prev) => ({ ...prev, [category]: checked }));
+  // Track checked categories/subcategories by id
+  const [categoryChecked, setCategoryChecked] = useState<{
+    [id: number]: boolean;
+  }>({});
+  const [subcategoryChecked, setSubcategoryChecked] = useState<{
+    [id: number]: boolean;
+  }>({});
+
+  const handleCategoryChange = (categoryId: number, checked: boolean) => {
+    setCategoryChecked((prev) => ({ ...prev, [categoryId]: checked }));
   };
 
-  const handleSubcategoryChange = (subcategory: string, checked: boolean) => {
-    setSubcategoryFilters((prev) => ({ ...prev, [subcategory]: checked }));
+  const handleSubcategoryChange = (subcategory: any, checked: boolean) => {
+    setSubcategoryChecked((prev) => ({ ...prev, [subcategory.id]: checked }));
   };
 
   const handleStockLevelChange = (level: string, checked: boolean) => {
     setStockLevelFilters((prev) => ({ ...prev, [level]: checked }));
+  };
+
+  const handleApply = () => {
+    const filters = {
+      status: Object.entries(statusFilters)
+        .filter(([_, checked]) => checked)
+        .map(([status]) => status),
+      categories: Object.entries(categoryChecked)
+        .filter(([_, checked]) => checked)
+        .map(([id]) => Number(id)),
+      subcategories: Object.entries(subcategoryChecked)
+        .filter(([_, checked]) => checked)
+        .map(([id]) => Number(id)),
+      stockLevels: Object.entries(stockLevelFilters)
+        .filter(([_, checked]) => checked)
+        .map(([level]) => level),
+      priceRange,
+    };
+    onApply?.(filters);
   };
 
   return (
@@ -178,24 +206,30 @@ export default function FilterMenu() {
                 <ChevronRight className="w-5 h-5 text-gray-500" />
               )}
             </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 pb-4">
-              {categories?.map((category) => (
-                <div key={category?.id} className="flex items-center space-x-3">
-                  <Checkbox
-                    id={`category-${category.name}`}
-                    onCheckedChange={(checked) =>
-                      handleCategoryChange(category.id, checked as boolean)
-                    }
-                    className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                  />
-                  <Label
-                    htmlFor={`category-${category}`}
-                    className="text-gray-700 capitalize"
+            <CollapsibleContent>
+              <div className="max-h-60 overflow-y-auto space-y-3 pb-4 pr-2">
+                {categories?.map((category) => (
+                  <div
+                    key={category?.id}
+                    className="flex items-center space-x-3"
                   >
-                    {category.name}
-                  </Label>
-                </div>
-              ))}
+                    <Checkbox
+                      id={`category-${category.name}`}
+                      checked={!!categoryChecked[category.id]}
+                      onCheckedChange={(checked) =>
+                        handleCategoryChange(category.id, checked as boolean)
+                      }
+                      className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    />
+                    <Label
+                      htmlFor={`category-${category}`}
+                      className="text-gray-700 capitalize"
+                    >
+                      {category.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </CollapsibleContent>
           </Collapsible>
           {/* Subcategory Filter */}
@@ -213,28 +247,30 @@ export default function FilterMenu() {
                 <ChevronRight className="w-5 h-5 text-gray-500" />
               )}
             </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 pb-4">
-              {/* <div className="relative mb-3">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input placeholder="Search subcategories" className="pl-9 py-2" />
-                </div> */}
-              {subCategories?.map((subcategory: any) => (
-                <div key={subcategory} className="flex items-center space-x-3">
-                  <Checkbox
-                    id={`subcategory-${subcategory.name}`}
-                    onCheckedChange={(checked) =>
-                      handleSubcategoryChange(subcategory, checked as boolean)
-                    }
-                    className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
-                  />
-                  <Label
-                    htmlFor={`subcategory-${subcategory.name}`}
-                    className="text-gray-700 capitalize"
+            <CollapsibleContent>
+              <div className="max-h-60 overflow-y-auto space-y-3 pb-4 pr-2">
+                {subCategories?.map((subcategory: any) => (
+                  <div
+                    key={subcategory.id}
+                    className="flex items-center space-x-3"
                   >
-                    {subcategory.name}
-                  </Label>
-                </div>
-              ))}
+                    <Checkbox
+                      id={`subcategory-${subcategory.name}`}
+                      checked={!!subcategoryChecked[subcategory.id]}
+                      onCheckedChange={(checked) =>
+                        handleSubcategoryChange(subcategory, checked as boolean)
+                      }
+                      className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                    />
+                    <Label
+                      htmlFor={`subcategory-${subcategory.name}`}
+                      className="text-gray-700 capitalize"
+                    >
+                      {subcategory.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </CollapsibleContent>
           </Collapsible>
           {/* Stock Level Filter */}
@@ -343,10 +379,33 @@ export default function FilterMenu() {
           </Collapsible>
         </div>
         <div className="flex justify-center gap-4 p-4">
-          <Button className="bg-blue-600 text-white hover:bg-blue-700 font-semibold">
+          <Button
+            className="bg-blue-600 text-white hover:bg-blue-700 font-semibold"
+            onClick={handleApply}
+          >
             Apply Filters
           </Button>
-          <Button className="bg-gray-50 text-gray-800 border border-gray-200 hover:bg-gray-100">
+          <Button
+            className="bg-gray-50 text-gray-800 border border-gray-200 hover:bg-gray-100"
+            onClick={() => {
+              setCategoryChecked({});
+              setSubcategoryChecked({});
+              setStatusFilters({
+                live: false,
+                "under review": false,
+                draft: false,
+                rejected: false,
+                expired: false,
+              });
+              setStockLevelFilters({
+                high: true,
+                medium: false,
+                low: true,
+              });
+              setPriceRange([0, 1000]);
+              onApply?.(null);
+            }}
+          >
             Clear
           </Button>
         </div>

@@ -44,6 +44,7 @@ export default function Products() {
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilter, setShowFilter] = useState(false);
+  const [filters, setFilters] = useState<any>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
 
   // Close filter menu on click outside or ESC
@@ -69,14 +70,69 @@ export default function Products() {
     };
   }, [showFilter]);
 
+  // Filtering logic
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    if (!filters) return products;
+
+    let result = [...products];
+
+    // Status filter
+    if (filters.status && filters.status.length > 0) {
+      result = result.filter((p) =>
+        filters.status.includes((p.status || "").toLowerCase())
+      );
+    }
+
+    // Category filter
+    if (filters.categories && filters.categories.length > 0) {
+      result = result.filter((p) =>
+        filters.categories.includes(p.category?.id)
+      );
+    }
+
+    // Subcategory filter
+    if (filters.subcategories && filters.subcategories.length > 0) {
+      result = result.filter((p) =>
+        filters.subcategories.includes(p.subcategory?.id)
+      );
+    }
+
+    // Stock level filter
+    if (filters.stockLevels && filters.stockLevels.length > 0) {
+      result = result.filter((p) => {
+        const stock = p.stock ?? 0;
+        if (filters.stockLevels.includes("high") && stock > 20) return true;
+        if (filters.stockLevels.includes("medium") && stock > 0 && stock <= 20)
+          return true;
+        if (filters.stockLevels.includes("low") && stock === 0) return true;
+        return false;
+      });
+    }
+
+    // Price range filter
+    if (filters.priceRange) {
+      const [min, max] = filters.priceRange;
+      result = result.filter((p) => {
+        const price =
+          p.price?.discounted ?? p.price?.orignal ?? p.price?.amount ?? 0;
+        return price >= min && price <= max;
+      });
+    }
+
+    return result;
+  }, [products, filters]);
+
   // Calculate paginated products
   const paginatedProducts = useMemo(() => {
-    if (!products) return [];
+    if (!filteredProducts) return [];
     const start = (currentPage - 1) * pageSize;
-    return products.slice(start, start + pageSize);
-  }, [products, currentPage]);
+    return filteredProducts.slice(start, start + pageSize);
+  }, [filteredProducts, currentPage]);
 
-  const totalPages = products ? Math.ceil(products.length / pageSize) : 1;
+  const totalPages = filteredProducts
+    ? Math.ceil(filteredProducts.length / pageSize)
+    : 1;
 
   const removeFromDeleteList = (id: number) => {
     setDeleteList((prevList) => prevList.filter((item) => item !== id));
@@ -137,7 +193,13 @@ export default function Products() {
                   ref={filterMenuRef}
                   tabIndex={-1}
                 >
-                  <FilterMenu />
+                  <FilterMenu
+                    onApply={(appliedFilters: any) => {
+                      setFilters(appliedFilters);
+                      setShowFilter(false);
+                      setCurrentPage(1);
+                    }}
+                  />
                 </div>
               )}
             </div>
@@ -163,16 +225,16 @@ export default function Products() {
         </CardHeader>
         <CardContent className="p-0">
           {/* Showing dash */}
-          {products && products.length > 7 && (
+          {filteredProducts && filteredProducts.length > 7 && (
             <div className="px-4 py-2 text-sm text-gray-500">
               Showing {(currentPage - 1) * pageSize + 1}-
-              {Math.min(currentPage * pageSize, products.length)} of{" "}
-              {products.length}
+              {Math.min(currentPage * pageSize, filteredProducts.length)} of{" "}
+              {filteredProducts.length}
             </div>
           )}
           <div className="overflow-x-auto">
             <table className="w-full">
-              {!isError && products?.length ? (
+              {!isError && filteredProducts?.length ? (
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="w-10 p-4">
@@ -256,7 +318,7 @@ export default function Products() {
                       />
                     </td>
                   </tr>
-                ) : !products?.length ? (
+                ) : !filteredProducts?.length ? (
                   <tr>
                     <td colSpan={8}>
                       <Empty
@@ -284,7 +346,7 @@ export default function Products() {
             </table>
           </div>
           {/* Pagination Controls */}
-          {products && products.length > pageSize && (
+          {filteredProducts && filteredProducts.length > pageSize && (
             <div className="flex justify-center items-center gap-2 py-4">
               <Button
                 className="size-[35px] rounded-full grid place-items-center"
