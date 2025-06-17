@@ -7,13 +7,14 @@ import { Check, X, Maximize2 } from "lucide-react";
 import Image from "next/image";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { getCustomer, updateCustomerStatus } from "@/lib/api/customer";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { X as CloseIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function CustomerDetail() {
   const queryClient = useQueryClient();
+  const router = useRouter();
   // Remove this line to avoid unnecessary refetch on every render:
   // queryClient.invalidateQueries({ queryKey: ["customer"] });
 
@@ -93,6 +94,17 @@ export default function CustomerDetail() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/10 to-blue-100/20 p-6">
+      {/* Back Button */}
+      <div className="max-w-4xl mx-auto flex justify-end mb-4">
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => router.push("/customers")}
+        >
+          <ChevronLeft size={18} />
+          Back to Customers
+        </Button>
+      </div>
       {/* Fullscreen Media Viewer */}
       {viewerOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center">
