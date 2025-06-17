@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useEffect, useState, useMemo } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import Product from "@/components/products/Product";
 import { useRouter } from "next/navigation";
@@ -28,6 +28,8 @@ import FilterMenu from "@/components/FilterMenu";
 // Adjust the import path as needed
 
 export default function Products() {
+  const pageSize = 8; // Number of products per page
+
   const {
     products,
     isLoadingProducts,
@@ -42,7 +44,30 @@ export default function Products() {
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilter, setShowFilter] = useState(false);
-  const pageSize = 7; // You can adjust this as needed
+  const filterMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close filter menu on click outside or ESC
+  useEffect(() => {
+    if (!showFilter) return;
+
+    function handleClick(e: MouseEvent) {
+      if (
+        filterMenuRef.current &&
+        !filterMenuRef.current.contains(e.target as Node)
+      ) {
+        setShowFilter(false);
+      }
+    }
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setShowFilter(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleEsc);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleEsc);
+    };
+  }, [showFilter]);
 
   // Calculate paginated products
   const paginatedProducts = useMemo(() => {
@@ -107,7 +132,11 @@ export default function Products() {
                 Filter
               </Button>
               {showFilter && (
-                <div className="absolute -left-3 top-8 z-30">
+                <div
+                  className="absolute -left-3 top-8 z-30"
+                  ref={filterMenuRef}
+                  tabIndex={-1}
+                >
                   <FilterMenu />
                 </div>
               )}
