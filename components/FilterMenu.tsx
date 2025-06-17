@@ -46,24 +46,10 @@ export default function FilterMenu({
     expired: false,
   });
 
-  const [categoryFilters, setCategoryFilters] = useState({
-    electronics: true,
-    clothing: false,
-    books: false,
-    home: true,
-  });
-
-  const [subcategoryFilters, setSubcategoryFilters] = useState({
-    smartphones: true,
-    laptops: false,
-    tablets: false,
-    accessories: false,
-  });
-
   const [stockLevelFilters, setStockLevelFilters] = useState({
-    high: true,
+    high: false,
     medium: false,
-    low: true,
+    low: false,
   });
 
   type SectionKey =
@@ -147,7 +133,11 @@ export default function FilterMenu({
       <div className="bg-white border border-gray-200 rounded-lg">
         <div className="flex justify-between items-center mb-1 border-b border-gray-200 px-6 py-3">
           <h2 className="text-xl font-semibold text-gray-900">Filters</h2>
-          <Button variant="ghost" className="text-blue-600 hover:text-blue-700">
+          <Button
+            variant="ghost"
+            className="text-blue-600 hover:text-blue-700"
+            onClick={handleApply}
+          >
             <FilterIcon />
           </Button>
         </div>

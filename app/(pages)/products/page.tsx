@@ -60,7 +60,10 @@ export default function Products() {
       }
     }
     function handleEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") setShowFilter(false);
+      if (e.key === "Escape") {
+        setShowFilter(false);
+        setFilters(null); // Clear all filters on ESC
+      }
     }
     document.addEventListener("mousedown", handleClick);
     document.addEventListener("keydown", handleEsc);
@@ -76,6 +79,8 @@ export default function Products() {
     if (!filters) return products;
 
     let result = [...products];
+    console.log("result", result);
+    console.log("filters", filters);
 
     // Status filter
     if (filters.status && filters.status.length > 0) {
