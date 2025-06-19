@@ -3,8 +3,13 @@ import supabase from "../config/supabase";
 import camelCase from "@/utils/camelCase";
 
 export const getCustomers = async () => {
+  console.log("getCustomers");
   try {
-    const { data, error } = await supabase.from("customers").select(`*`);
+    const { data, error } = await supabase
+      .from("customers")
+      .select(
+        `id, name, email, created_at, location, verification_status, img_url`
+      );
 
     if (error) throw new Error(error?.message);
 

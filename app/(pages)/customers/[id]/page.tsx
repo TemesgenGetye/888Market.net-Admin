@@ -85,6 +85,10 @@ export default function CustomerDetail() {
         queryKey: ["customer"],
         refetchType: "none",
       });
+      queryClient.invalidateQueries({
+        queryKey: ["customers"],
+        refetchType: "all",
+      });
       refetch();
       toast.success("Customer approved.");
     },
@@ -97,6 +101,10 @@ export default function CustomerDetail() {
     mutationFn: () => updateCustomerStatus(Number(id), "rejected"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customer"] });
+      queryClient.invalidateQueries({
+        queryKey: ["customers"],
+        refetchType: "all",
+      });
       refetch();
       toast.success("Customer rejected.");
     },
@@ -303,14 +311,6 @@ export default function CustomerDetail() {
                           autoPlay
                           className="size-full"
                         />
-                        <div className="flex justify-center">
-                          <div
-                            className="flex justify-center mt-1 bg-black/15 hover:bg-black/20 size-[30px] rounded-full items-center cursor-pointer"
-                            onClick={() => openViewer(1)}
-                          >
-                            <Maximize2 size={15} />
-                          </div>
-                        </div>
                       </>
                     ) : (
                       <div className="flex justify-center flex-col items-center h-full mb-[40px] gap-2">
