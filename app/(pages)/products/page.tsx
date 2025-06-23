@@ -45,6 +45,7 @@ export default function Products() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilter, setShowFilter] = useState(false);
   const [filters, setFilters] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const filterMenuRef = useRef<HTMLDivElement>(null);
 
   // Close filter menu on click outside or ESC
@@ -76,57 +77,88 @@ export default function Products() {
   // Filtering logic
   const filteredProducts = useMemo(() => {
     if (!products) return [];
-    if (!filters) return products;
 
     let result = [...products];
-    console.log("result", result);
-    console.log("filters", filters);
 
-    // Status filter
-    if (filters.status && filters.status.length > 0) {
-      result = result.filter((p) =>
-        filters.status.includes((p.status || "").toLowerCase())
-      );
-    }
+    // Search functionality
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter((product) => {
+        // Search in product name
+        const productName = product.name?.toLowerCase() || "";
+        if (productName.includes(query)) return true;
 
-    // Category filter
-    if (filters.categories && filters.categories.length > 0) {
-      result = result.filter((p) =>
-        filters.categories.includes(p.category?.id)
-      );
-    }
+        // Search in category name
+        const categoryName = product.category?.name?.toLowerCase() || "";
+        if (categoryName.includes(query)) return true;
 
-    // Subcategory filter
-    if (filters.subcategories && filters.subcategories.length > 0) {
-      result = result.filter((p) =>
-        filters.subcategories.includes(p.subcategory?.id)
-      );
-    }
+        // Search in subcategory name
+        const subcategoryName = product.subcategory?.name?.toLowerCase() || "";
+        if (subcategoryName.includes(query)) return true;
 
-    // Stock level filter
-    if (filters.stockLevels && filters.stockLevels.length > 0) {
-      result = result.filter((p) => {
-        const stock = p.stock ?? 0;
-        if (filters.stockLevels.includes("high") && stock > 20) return true;
-        if (filters.stockLevels.includes("medium") && stock > 0 && stock <= 20)
-          return true;
-        if (filters.stockLevels.includes("low") && stock === 0) return true;
+        // Search in product description
+        const description = product.description?.toLowerCase() || "";
+        if (description.includes(query)) return true;
+
         return false;
       });
     }
 
-    // Price range filter
-    if (filters.priceRange) {
-      const [min, max] = filters.priceRange;
-      result = result.filter((p) => {
-        const price =
-          p.price?.discounted ?? p.price?.orignal ?? p.price?.amount ?? 0;
-        return price >= min && price <= max;
-      });
+    // Apply other filters if they exist
+    if (filters) {
+      console.log("result", result);
+      console.log("filters", filters);
+
+      // Status filter
+      if (filters.status && filters.status.length > 0) {
+        result = result.filter((p) =>
+          filters.status.includes((p.status || "").toLowerCase())
+        );
+      }
+
+      // Category filter
+      if (filters.categories && filters.categories.length > 0) {
+        result = result.filter((p) =>
+          filters.categories.includes(p.category?.id)
+        );
+      }
+
+      // Subcategory filter
+      if (filters.subcategories && filters.subcategories.length > 0) {
+        result = result.filter((p) =>
+          filters.subcategories.includes(p.subcategory?.id)
+        );
+      }
+
+      // Stock level filter
+      if (filters.stockLevels && filters.stockLevels.length > 0) {
+        result = result.filter((p) => {
+          const stock = p.stock ?? 0;
+          if (filters.stockLevels.includes("high") && stock > 20) return true;
+          if (
+            filters.stockLevels.includes("medium") &&
+            stock > 0 &&
+            stock <= 20
+          )
+            return true;
+          if (filters.stockLevels.includes("low") && stock === 0) return true;
+          return false;
+        });
+      }
+
+      // Price range filter
+      if (filters.priceRange) {
+        const [min, max] = filters.priceRange;
+        result = result.filter((p) => {
+          const price =
+            p.price?.discounted ?? p.price?.orignal ?? p.price?.amount ?? 0;
+          return price >= min && price <= max;
+        });
+      }
     }
 
     return result;
-  }, [products, filters]);
+  }, [products, filters, searchQuery]);
 
   // Calculate paginated products
   const paginatedProducts = useMemo(() => {
@@ -150,6 +182,18 @@ export default function Products() {
     setDeleteList([]);
     setIsModalVisible(false);
     setIsSelectedAll(false);
+  };
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1); // Reset to first page when searching
+  };
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchQuery("");
+    setCurrentPage(1);
   };
 
   return (
@@ -177,8 +221,18 @@ export default function Products() {
                 disabled={isError || isLoadingProducts || !products?.length}
                 type="text"
                 placeholder="Search products..."
+                value={searchQuery}
+                onChange={handleSearchChange}
                 className="pl-9 h-9 w-[250px] rounded-md border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              {searchQuery && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-2.5 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              )}
             </div>
             {/* Filter Button (beside search) */}
             <div className="relative">
@@ -235,6 +289,11 @@ export default function Products() {
               Showing {(currentPage - 1) * pageSize + 1}-
               {Math.min(currentPage * pageSize, filteredProducts.length)} of{" "}
               {filteredProducts.length}
+              {searchQuery && (
+                <span className="ml-2">
+                  for "<span className="font-medium">{searchQuery}</span>"
+                </span>
+              )}
             </div>
           )}
           <div className="overflow-x-auto">
