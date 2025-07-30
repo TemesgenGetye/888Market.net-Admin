@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowLeft, Plus, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Pen, Pencil, Plus, ShoppingBag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
@@ -9,14 +9,27 @@ import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { useCategories } from "@/hooks/useCategories";
 import SubmitButton from "../SubmitButton";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
+
+interface catData {
+  img: File;
+  icon: File;
+  name: string;
+  delImgs: string[];
+}
 
 export default function CategoryForm() {
   const { categories } = useCategories();
-  const { isCreatingCategory, createCagetory } = useCategories();
+  const {
+    isCreatingCategory,
+    createCategory,
+    updateCategory,
+    isUpdatingCategory,
+  } = useCategories();
 
-  const { id } = useParams();
-  const category = categories?.find((scat) => scat.id === id);
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
+  const category = categories?.find((scat) => scat.id == id);
 
   const thumbnail = useRef<HTMLInputElement>(null);
   const [thumbnailFile, setThumbnailFile] = useState<any | null>(null);
@@ -30,12 +43,19 @@ export default function CategoryForm() {
     const { name } = data;
     const img = thumbnailFile?.file;
     const icon = iconFile?.file;
-    const categoryData = {
+    const categoryData: catData = {
       name,
       img,
       icon,
+      delImgs: [],
     };
-    createCagetory(categoryData);
+
+    if (id) {
+      if (iconFile?.file) categoryData.delImgs.push(category?.iconUrl);
+      if (thumbnailFile?.file) categoryData.delImgs.push(category?.imgUrl);
+    }
+
+    id ? updateCategory({ ...categoryData, id }) : createCategory(categoryData);
   };
 
   return (
@@ -52,12 +72,15 @@ export default function CategoryForm() {
             <div className="flex items-center gap-2">
               <ShoppingBag className="h-5 w-5 text-gray-700" />
               <h1 className="text-xl font-medium text-gray-700">
-                Add New Category
+                {id ? "Edit existing category" : "Add new category"}
               </h1>
             </div>
           </div>
           <div className="flex gap-4">
-            <SubmitButton isLoading={isCreatingCategory} label="Add Category" />
+            <SubmitButton
+              isLoading={id ? isUpdatingCategory : isCreatingCategory}
+              label={id ? "Edit Category" : "Add Category"}
+            />
           </div>
         </div>
 
@@ -85,12 +108,31 @@ export default function CategoryForm() {
                   <div className="flex items-center gap-4">
                     {iconFile?.url ? (
                       <Image
-                        src={iconFile.url || "/images/placeholder.png"}
+                        src={iconFile.url}
                         alt="Thumbnail"
                         width={200}
                         height={200}
                         className="rounded-lg"
                       />
+                    ) : category?.iconUrl ? (
+                      <div className="relative">
+                        <Image
+                          src={category?.iconUrl}
+                          alt="Thumbnail"
+                          width={200}
+                          height={200}
+                          className="rounded-lg"
+                        />
+                        <button
+                          className="rounded-lg p-1 absolute top-0 -right-5 bg-gray-50 border border-blue-400"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            icon.current?.click();
+                          }}
+                        >
+                          <Pencil className="h-5 w-5 text-blue-400" />
+                        </button>
+                      </div>
                     ) : (
                       <button
                         className="border border-gray-200 rounded-lg p-2 min-w-[80px] h-[80px] flex items-center justify-center bg-gray-50"
@@ -130,9 +172,29 @@ export default function CategoryForm() {
                         height={200}
                         className="rounded-lg"
                       />
+                    ) : category?.imgUrl ? (
+                      <div className="relative">
+                        <Image
+                          src={category?.imgUrl}
+                          alt="Thumbnail"
+                          width={200}
+                          height={200}
+                          className="rounded-lg"
+                        />
+                        <button
+                          className="border border-blue-400 rounded-lg p-1 absolute top-0 -right-5 bg-gray-50"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            thumbnail.current?.click();
+                          }}
+                        >
+                          <Pencil className="h-5 w-5 text-blue-400" />
+                          {/* <p className="text-xs">EDIT</p> */}
+                        </button>
+                      </div>
                     ) : (
                       <button
-                        className="border border-gray-200 rounded-lg p-2 min-w-[80px] h-[80px] flex items-center justify-center bg-gray-50"
+                        className="rounded-lg p-2 min-w-[80px] h-[80px] flex items-center justify-center bg-gray-50 border border-gray-50"
                         onClick={(e) => {
                           e.preventDefault();
                           thumbnail.current?.click();

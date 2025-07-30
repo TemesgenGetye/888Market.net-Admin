@@ -9,6 +9,7 @@ import { Button } from "../ui/button";
 import { SubCategoryType } from "./type";
 import { useSubCategories } from "@/hooks/useSubCategories";
 import Modal from "../Modal";
+import { useRouter } from "next/navigation";
 
 interface SubCategoryProps {
   subCategory: SubCategoryType;
@@ -32,6 +33,7 @@ export default function SubCategory({
   const { deleteSubCategory, isDeletingSubCategory } = useSubCategories();
   const [checkedState, setCheckedState] = useState<boolean>(checked || false);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const router = useRouter();
 
   return (
     <tr className="border-b border-gray-100">
@@ -76,6 +78,7 @@ export default function SubCategory({
             variant="outline"
             size="sm"
             className="text-blue-600 border-blue-200"
+            onClick={() => router.push(`subcategories/new?id=${id}`)}
           >
             <Pencil size={16} />
           </Button>

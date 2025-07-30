@@ -3,6 +3,7 @@ import {
   getSubCategories,
   postSubCategory,
   deleteSubCategory as removeSubCategory,
+  updateSubCategory,
 } from "@/lib/api/subCategory";
 import camelCase from "@/utils/camelCase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,7 +45,7 @@ export function useSubCategories() {
     useMutation({
       mutationFn: deleteMultipleSubCategories,
       onSuccess: (data: any[]) => {
-        queryClient.invalidateQueries({ queryKey: ["categories"] });
+        queryClient.invalidateQueries({ queryKey: ["sub-categories"] });
         toast.success(`${data?.length ?? 0} categories successfully deleted.`);
       },
       onError: (err: any) => {
@@ -52,6 +53,14 @@ export function useSubCategories() {
         toast.error("An error occurred while deleting multiple categories.");
       },
     });
+
+  const { mutate: updateSubCat, isPending: isUpdating } = useMutation({
+    mutationFn: updateSubCategory,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sub-categories"] });
+      toast.success("Subcategory succesfully updated.");
+    },
+  });
 
   const {
     isLoading: isLoadingSubCategories,
@@ -75,6 +84,8 @@ export function useSubCategories() {
     refetchSubCategories,
     deleteSubCategory,
     deleteSubCateogries,
+    updateSubCat,
+    isUpdating,
     isDeletingSubCategory,
     isDeletingSubCategories,
   };

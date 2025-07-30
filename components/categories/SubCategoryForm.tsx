@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Plus, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, ShoppingBag } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
 
 import { Input } from "@/components/ui/input";
@@ -19,19 +19,28 @@ import {
 import SubmitButton from "../SubmitButton";
 import { useCategories } from "@/hooks/useCategories";
 import { useSubCategories } from "@/hooks/useSubCategories";
-import { useParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 export default function SubCategoryForm() {
-  const { subCategories } = useSubCategories();
-  const { id } = useParams();
-  const subCategory = subCategories?.find((scat: any) => scat.id === id);
-  const thumbnail = useRef<HTMLInputElement>(null);
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
+
+  const {
+    subCategories,
+    isCreatingSubCat,
+    isUpdating,
+    createSubCat,
+    updateSubCat,
+  } = useSubCategories();
   const { categories } = useCategories();
-  const { createSubCat, isCreatingSubCat } = useSubCategories();
+
+  const subCategory = subCategories?.find((scat: any) => scat.id == id);
+  const thumbnail = useRef<HTMLInputElement>(null);
   const [thumbnailFile, setThumbnailFile] = useState<any | null>(null);
   const { register, handleSubmit, control, setValue } = useForm({
     defaultValues: subCategory,
   });
+
   const onSubmit = (data: any) => {
     const {
       name,
@@ -42,9 +51,13 @@ export default function SubCategoryForm() {
       name,
       img,
       category_id,
+      delImg: "",
     };
-    createSubCat(categoryData);
+    if (id)
+      categoryData.delImg = thumbnailFile?.file ? subCategory?.imgUrl : "";
+    id ? updateSubCat({ ...categoryData, id }) : createSubCat(categoryData);
   };
+
   return (
     <div className="max-w-5xl p-6 bg-white">
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -59,18 +72,17 @@ export default function SubCategoryForm() {
             <div className="flex items-center gap-2">
               <ShoppingBag className="h-5 w-5 text-gray-700" />
               <h1 className="text-xl font-medium text-gray-700">
-                Add New Sub Category
+                {id ? "Edit existing sub-category" : "Add New Sub Category"}
               </h1>
             </div>
           </div>
           <div className="flex gap-4">
             <SubmitButton
-              isLoading={isCreatingSubCat}
-              label="Add Sub-Category"
+              isLoading={id ? isUpdating : isCreatingSubCat}
+              label={id ? "Edit Sub-Category" : "Add Sub-Category"}
             />
           </div>
         </div>
-
         <div>
           <div className="max-w-5xl space-y-6">
             <div className="bg-gray-50 p-6 rounded-lg">
@@ -90,7 +102,6 @@ export default function SubCategoryForm() {
                     {...register("name", { required: true })}
                   />
                 </div>
-
                 <div>
                   <Label htmlFor="productDescription" className="block mb-2">
                     Select Category
@@ -105,7 +116,7 @@ export default function SubCategoryForm() {
                           const cat = categories?.find(
                             (c) => c.name.toLowerCase() === value.toLowerCase()
                           );
-                          field.onChange(value); // <-- sync with react-hook-form
+                          field.onChange(value); 
                           setValue("category.id", cat?.id);
                         }}
                       >
@@ -136,6 +147,25 @@ export default function SubCategoryForm() {
                         height={200}
                         className="rounded-lg"
                       />
+                    ) : subCategory?.imgUrl ? (
+                      <div className="relative">
+                        <Image
+                          src={subCategory?.imgUrl}
+                          alt="Thumbnail"
+                          width={200}
+                          height={200}
+                          className="rounded-lg"
+                        />
+                        <button
+                          className="rounded-lg p-1 absolute top-0 -right-5 bg-gray-50 border border-blue-400"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            thumbnail.current?.click();
+                          }}
+                        >
+                          <Pencil className="h-5 w-5 text-blue-400" />
+                        </button>
+                      </div>
                     ) : (
                       <button
                         className="border border-gray-200 rounded-lg p-2 min-w-[80px] h-[80px] flex items-center justify-center bg-gray-50"

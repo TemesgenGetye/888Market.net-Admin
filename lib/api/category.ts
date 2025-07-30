@@ -106,11 +106,16 @@ export const deleteMultipleCategories = async (ids: number[]) => {
 
 export const updateCategory = async (category: any) => {
   try {
-    const { id, name, img } = category;
-    const img_url = await uploadImage(img, "categories");
+    const { name, img, icon, id, delImgs } = category;
+    for (const url of delImgs) {
+      await deleteImage(url, "categories");
+    }
+    const img_url = img ? await uploadImage(img, "categories") : undefined;
+    const icon_url = icon ? await uploadImage(icon, "categories") : undefined;
+
     const { data, error } = await supabase
       .from("categories")
-      .update({ name, img_url })
+      .update({ name, img_url, icon_url })
       .eq("id", id);
 
     if (error) throw new Error(error?.message);

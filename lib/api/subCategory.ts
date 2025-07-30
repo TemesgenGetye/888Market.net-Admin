@@ -91,8 +91,9 @@ export const deleteMultipleSubCategories = async (ids: number[]) => {
 
 export const updateSubCategory = async (subCategory: any) => {
   try {
-    const { id, name, img, category_id } = subCategory;
-    const img_url = await uploadImage(img, "subcategories");
+    const { id, name, img, category_id, delImg } = subCategory;
+    const img_url = img ? await uploadImage(img, "subcategories") : undefined;
+    delImg && deleteImage(delImg, "subcategories");
     const { data, error } = await supabase
       .from("subcategories")
       .update({ name, img_url, category_id })

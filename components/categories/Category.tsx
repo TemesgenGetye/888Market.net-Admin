@@ -9,6 +9,7 @@ import { Button } from "../ui/button";
 import { CategoryType } from "./type";
 import { useCategories } from "@/hooks/useCategories";
 import Modal from "../Modal";
+import { useRouter } from "next/navigation";
 
 interface CategoryProps {
   category: CategoryType;
@@ -22,11 +23,16 @@ export default function Category({
   checked,
   removeFromDeleteList,
 }: CategoryProps) {
-  const { deleteCategory, isDeletingCategory } = useCategories();
+  const {
+    deleteCategory,
+    isDeletingCategory,
+    updateCategory,
+    isUpdatingCategory,
+  } = useCategories();
   const { imgUrl, name, iconUrl, id } = category;
   const [checkedState, setCheckedState] = useState<boolean>(checked || false);
   const [isModalVisible, setIsModalVisible] = useState(false);
-
+  const router = useRouter();
   useEffect(() => {
     setCheckedState((state) => (checked !== undefined ? checked : state));
   }, [checked]);
@@ -82,6 +88,9 @@ export default function Category({
             variant="outline"
             size="sm"
             className="text-blue-600 border-blue-200"
+            onClick={() => {
+              router.push(`/categoriees/new?id=${id}`);
+            }}
           >
             <Pencil size={16} />
           </Button>

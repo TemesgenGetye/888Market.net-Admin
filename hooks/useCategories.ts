@@ -6,6 +6,7 @@ import {
   getCategories,
   postCategory,
   deleteCategory as removeCategories,
+  updateCategory as updateCategoryApi,
 } from "@/lib/api/category";
 import camelCase from "@/utils/camelCase";
 import { useRouter } from "next/navigation";
@@ -14,7 +15,7 @@ export function useCategories() {
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  const { mutate: createCagetory, isPending: isCreatingCategory } = useMutation(
+  const { mutate: createCategory, isPending: isCreatingCategory } = useMutation(
     {
       mutationFn: postCategory,
       onSuccess: () => {
@@ -69,6 +70,16 @@ export function useCategories() {
     }
   );
 
+  const { mutate: updateCategory, isPending: isUpdatingCategory } = useMutation(
+    {
+      mutationFn: updateCategoryApi,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["categories"] });
+        toast.success("Category successfully updated.");
+      },
+    }
+  );
+
   return {
     isLoadingCategories,
     categories,
@@ -76,9 +87,11 @@ export function useCategories() {
     isDeletingCategories,
     isDeletingCategory,
     isCreatingCategory,
-    createCagetory,
+    isUpdatingCategory,
+    createCategory,
     refetchCategories,
     deleteCategory,
     deleteCateogries,
+    updateCategory,
   };
 }
