@@ -108,7 +108,7 @@ export default function Order({ order }: OrderComponentProps) {
             width={100}
             height={100}
             className="size-[40px] rounded-full object-cover"
-            alt={`${customerName.slice(0, 4)}-img`}
+            alt={`${customerName?.slice(0, 4)}-img`}
           />
           <div>
             <div className="text-sm font-medium">{customerName}</div>
