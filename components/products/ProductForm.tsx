@@ -39,6 +39,90 @@ interface FormData {
   status?: string;
 }
 
+const EMPTY_FORM: FormData = {
+  name: "",
+  description: "",
+  price: { original: 0, discounted: 0, currency: "USD" },
+  stock: 0,
+  category: { id: undefined, name: "" },
+  subcategory: { id: undefined, name: "" },
+  status: "live",
+};
+
+/** API may use `orignal` (typo), `amount`, or `original`; values may be strings from JSON */
+function parsePriceNumber(value: unknown): number {
+  if (typeof value === "number" && !Number.isNaN(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number.parseFloat(value);
+    return Number.isNaN(n) ? 0 : n;
+  }
+  return 0;
+}
+
+function priceFromApi(price: unknown): Price {
+  if (price == null) {
+    return { original: 0, discounted: 0, currency: "AED" };
+  }
+  if (typeof price === "number") {
+    return { original: price, discounted: 0, currency: "AED" };
+  }
+  if (typeof price === "string") {
+    try {
+      const parsed = JSON.parse(price) as unknown;
+      if (typeof parsed === "object" && parsed !== null) {
+        return priceFromApi(parsed);
+      }
+    } catch {
+      return {
+        original: parsePriceNumber(price),
+        discounted: 0,
+        currency: "AED",
+      };
+    }
+    return { original: 0, discounted: 0, currency: "AED" };
+  }
+  if (typeof price !== "object") {
+    return { original: 0, discounted: 0, currency: "AED" };
+  }
+  const p = price as Record<string, unknown>;
+  const original =
+    parsePriceNumber(p.original) ||
+    parsePriceNumber(p.orignal) ||
+    parsePriceNumber(p.amount);
+  const discounted = parsePriceNumber(p.discounted);
+  const currency =
+    typeof p.currency === "string" && p.currency.trim() !== ""
+      ? p.currency
+      : "AED";
+  return { original, discounted, currency };
+}
+
+function buildFormValuesFromProduct(product: {
+  name?: string;
+  description?: string;
+  price?: unknown;
+  stock?: number;
+  category?: { id?: number; name?: string };
+  subcategory?: { id?: number; name?: string };
+  status?: string;
+}): FormData {
+  return {
+    name: product.name || "",
+    description: product.description || "",
+    price: priceFromApi(product.price),
+    stock: product.stock ?? 0,
+    category: {
+      id: product.category?.id,
+      name: product.category?.name || "",
+    },
+    subcategory: {
+      id: product.subcategory?.id,
+      name: product.subcategory?.name || "",
+    },
+    status: product.status || "",
+  };
+}
+
 export default function ProductForm() {
   const {
     products,
@@ -54,7 +138,22 @@ export default function ProductForm() {
     () => products?.find((p) => p.id === Number(pid)),
     [products, pid]
   );
-  const isEditable = !pid || product?.createdBy === null; // Adjust logic as needed
+  /** Platform-created listings (admin) or new product form — all fields editable */
+  const isFullyEditable =
+    !pid ||
+    Boolean(
+      product &&
+        (product.createdBy == null || product.createdBy === "")
+    );
+  /** Customer-submitted listing — only status may be changed */
+  const isCustomerProduct = Boolean(
+    pid &&
+      product &&
+      product.createdBy != null &&
+      product.createdBy !== ""
+  );
+  const canSubmit = !pid || isFullyEditable || isCustomerProduct;
+  const canEditStatus = !pid || !!product;
 
   const statusOptions = [
     "live",
@@ -64,35 +163,10 @@ export default function ProductForm() {
     "rejected",
   ];
 
-  const defaultValues = product
-    ? {
-        name: product.name || "",
-        description: product.description || "",
-        price: {
-          original: product.price?.original || 0,
-          discounted: product.price?.discounted || 0,
-          currency: product.price?.currency || "AED",
-        },
-        stock: product.stock || 0,
-        category: {
-          id: product.category?.id,
-          name: product.category?.name || "",
-        },
-        subcategory: {
-          id: product.subcategory?.id,
-          name: product.subcategory?.name || "",
-        },
-        status: product.status || "",
-      }
-    : {
-        name: "",
-        description: "",
-        price: { original: 0, discounted: 0, currency: "USD" },
-        stock: 0,
-        category: { id: undefined, name: "" },
-        subcategory: { id: undefined, name: "" },
-        status: "live",
-      };
+  const defaultValues = useMemo(
+    () => (product ? buildFormValuesFromProduct(product) : EMPTY_FORM),
+    [product]
+  );
 
   // Initialize form with default values
   const {
@@ -100,7 +174,7 @@ export default function ProductForm() {
     handleSubmit,
     control,
     setValue,
-    // reset,
+    reset,
     formState: { errors },
     clearErrors,
   } = useForm<FormData>({ defaultValues });
@@ -117,6 +191,19 @@ export default function ProductForm() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     product?.category?.id ?? null
   );
+
+  // defaultValues only apply on first mount; when `product` loads from the query, sync the form
+  useEffect(() => {
+    if (!pid || !product) return;
+    reset(buildFormValuesFromProduct(product));
+    setSelectedCategoryId(product.category?.id ?? null);
+    setImgs(
+      product.imgUrls?.length
+        ? product.imgUrls.map((url: string) => ({ url }))
+        : []
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-sync when the loaded product row changes, not on every query refetch
+  }, [pid, product?.id, reset]);
 
   // When category changes, reset subcategory if it doesn't belong to the new category
   useEffect(() => {
@@ -212,7 +299,7 @@ export default function ProductForm() {
               <Button
                 variant="outline"
                 className="gap-2 rounded-full"
-                disabled={!isEditable}
+                disabled={!isFullyEditable}
               >
                 <Save className="h-5 w-5" />
                 Save Draft
@@ -221,7 +308,7 @@ export default function ProductForm() {
             <SubmitButton
               isLoading={pid ? isUpdatingProduct : isCreatingProduct}
               label={pid ? "Edit Product" : "Add Product"}
-              disabled={!isEditable}
+              disabled={!canSubmit}
             />
           </div>
         </div>
@@ -249,7 +336,7 @@ export default function ProductForm() {
                       required: "Product name is required",
                     })}
                     placeholder="...Product name"
-                    disabled={!isEditable}
+                    disabled={!isFullyEditable}
                   />
                   {errors.name && (
                     <span className="text-red-500 text-xs">
@@ -271,7 +358,7 @@ export default function ProductForm() {
                     {...register("description", {
                       required: "Product description is required",
                     })}
-                    disabled={!isEditable}
+                    disabled={!isFullyEditable}
                   />
                   {errors.description && (
                     <span className="text-red-500 text-xs">
@@ -294,7 +381,7 @@ export default function ProductForm() {
                       <Select
                         value={field.value}
                         onValueChange={(value) => field.onChange(value)}
-                        disabled={!isEditable}
+                        disabled={!canEditStatus}
                       >
                         <SelectTrigger className="bg-gray-100 border-0 w-full">
                           <SelectValue placeholder="Select status" />
@@ -342,7 +429,7 @@ export default function ProductForm() {
                       validate: (v) =>
                         v > 0 || "Original price must be greater than 0",
                     })}
-                    disabled={!isEditable}
+                    disabled={!isFullyEditable}
                   />
                   {errors.price?.original && (
                     <span className="text-red-500 text-xs">
@@ -367,7 +454,7 @@ export default function ProductForm() {
                     {...register("price.discounted", {
                       valueAsNumber: true,
                     })}
-                    disabled={!isEditable}
+                    disabled={!isFullyEditable}
                   />
                   {/* Discounted price is optional, so no error */}
                 </div>
@@ -386,7 +473,7 @@ export default function ProductForm() {
                     {...register("price.currency", {
                       required: "Currency is required",
                     })}
-                    disabled={!isEditable}
+                    disabled={!isFullyEditable}
                   />
                   {errors.price?.currency && (
                     <span className="text-red-500 text-xs">
@@ -408,7 +495,7 @@ export default function ProductForm() {
                       valueAsNumber: true,
                       validate: (v) => v > 0 || "Stock must be greater than 0",
                     })}
-                    disabled={!isEditable}
+                    disabled={!isFullyEditable}
                   />
                   {errors.stock && (
                     <span className="text-red-500 text-xs">
@@ -462,7 +549,7 @@ export default function ProductForm() {
                             setValue("subcategory.id", undefined);
                           }
                         }}
-                        disabled={!isEditable}
+                        disabled={!isFullyEditable}
                       >
                         <SelectTrigger className="bg-gray-100 border-0">
                           <SelectValue placeholder="Select category" />
@@ -517,7 +604,7 @@ export default function ProductForm() {
                             if (cat) setValue("category.name", cat.name);
                           }
                         }}
-                        disabled={!isEditable}
+                        disabled={!isFullyEditable}
                       >
                         <SelectTrigger className="bg-gray-100 border-0">
                           <SelectValue placeholder="Select sub-category" />
@@ -560,7 +647,7 @@ export default function ProductForm() {
                     alt={`Thumbnail ${i + 1}`}
                     className="w-full h-full object-contain"
                   />
-                  {!isEditable ? null : (
+                  {!isFullyEditable ? null : (
                     <button
                       className="size-[20px] rounded-full border border-black/60 flex justify-center items-center absolute top-0 right-0 text-xs hover:text-blue-500"
                       onClick={(e) => {
@@ -593,13 +680,13 @@ export default function ProductForm() {
                   setImgs((prev) => [...prev, ...newImgs]);
                   if (files.length > 0) clearErrors("imgUrls" as any);
                 }}
-                disabled={!isEditable}
+                disabled={!isFullyEditable}
               />
               <button
                 className="border border-gray-200 rounded-lg p-2 min-w-[80px] h-[80px] flex items-center justify-center bg-gray-50"
                 onClick={(e) => {
                   e.preventDefault();
-                  if (!isEditable) return;
+                  if (!isFullyEditable) return;
                   if (imgs.length >= 10) {
                     toast.error("Maximum amount of image reached");
                     return;
@@ -607,7 +694,7 @@ export default function ProductForm() {
                   fileRef?.current?.click();
                 }}
                 type="button"
-                disabled={!isEditable}
+                disabled={!isFullyEditable}
               >
                 <Plus className="h-6 w-6 text-gray-400" />
               </button>

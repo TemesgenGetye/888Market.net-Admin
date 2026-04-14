@@ -1,8 +1,8 @@
-"use clinet";
+"use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
-import { MoreVertical, Pen, Pencil, Trash } from "lucide-react";
+import { Pencil, Trash } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "../ui/button";
@@ -16,12 +16,14 @@ interface ProductComponentProps {
   product: ProductTypes;
   key: number;
   checked?: boolean;
+  addToDeleteList?: (id: number) => void;
   removeFromDeleteList?: (id: number) => void;
 }
 
 export default function Product({
   product,
   checked,
+  addToDeleteList,
   removeFromDeleteList,
 }: ProductComponentProps) {
   const {
@@ -38,21 +40,16 @@ export default function Product({
 
   const categoryName = category?.name ?? "";
   const subcategoryName = subcategory?.name ?? "";
-  const [checkedState, setCheckedState] = useState(checked || false);
   const router = useRouter();
-
-  useEffect(() => {
-    setCheckedState((state) => (checked !== undefined ? checked : state));
-  }, [checked]);
 
   return (
     <tr className="border-b border-gray-100 relative">
       <td className="p-4">
         <Checkbox
-          checked={checkedState}
-          onClick={() => {
-            setCheckedState((state) => !state);
-            if (checkedState) removeFromDeleteList?.(id);
+          checked={!!checked}
+          onCheckedChange={(value) => {
+            if (value === true) addToDeleteList?.(id);
+            else removeFromDeleteList?.(id);
           }}
         />
       </td>

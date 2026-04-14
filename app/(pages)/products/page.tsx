@@ -39,7 +39,6 @@ export default function Products() {
     deleteProducts,
   } = useProducts();
   const router = useRouter();
-  const [isAllSelected, setIsSelectedAll] = useState<boolean>(false);
   const [deleteList, setDeleteList] = useState<number[]>([]);
   const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -106,8 +105,19 @@ export default function Products() {
 
     // Apply other filters if they exist
     if (filters) {
-      console.log("result", result);
-      console.log("filters", filters);
+      // Own (admin) vs customer products — matches ProductForm: `createdBy === null` is platform-owned
+      const ps = filters.productSource as string[] | undefined;
+      if (ps && ps.length === 1) {
+        if (ps[0] === "own") {
+          result = result.filter(
+            (p) => p.createdBy == null || p.createdBy === ""
+          );
+        } else if (ps[0] === "customer") {
+          result = result.filter(
+            (p) => p.createdBy != null && p.createdBy !== ""
+          );
+        }
+      }
 
       // Status filter
       if (filters.status && filters.status.length > 0) {
@@ -171,17 +181,23 @@ export default function Products() {
     ? Math.ceil(filteredProducts.length / pageSize)
     : 1;
 
+  const allFilteredSelected = useMemo(() => {
+    if (!filteredProducts.length) return false;
+    return filteredProducts.every((p) => deleteList.includes(p.id));
+  }, [filteredProducts, deleteList]);
+
+  const addToDeleteList = (id: number) => {
+    setDeleteList((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  };
+
   const removeFromDeleteList = (id: number) => {
     setDeleteList((prevList) => prevList.filter((item) => item !== id));
-    if (deleteList.length === 1) setIsSelectedAll(false);
   };
 
   const handleDelete = () => {
-    // console.log("Deleting products:", deleteList);
     deleteProducts(deleteList);
     setDeleteList([]);
     setIsModalVisible(false);
-    setIsSelectedAll(false);
   };
 
   // Handle search input change
@@ -264,15 +280,17 @@ export default function Products() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-red-600 border-red-200"
-              onClick={() => setIsModalVisible(true)}
-              disabled={isError || isLoadingProducts || !products?.length}
-            >
-              <Trash2 size={16} className="mr-2" /> Delete
-            </Button>
+            {deleteList.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-600 border-red-200"
+                onClick={() => setIsModalVisible(true)}
+                disabled={isError || isLoadingProducts || !products?.length}
+              >
+                <Trash2 size={16} className="mr-2" /> Delete
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -303,15 +321,16 @@ export default function Products() {
                   <tr className="border-b border-gray-100">
                     <th className="w-10 p-4">
                       <Checkbox
-                        onClick={() => {
-                          setIsSelectedAll((state) => !state);
-                          if (!isAllSelected) {
+                        checked={allFilteredSelected}
+                        onCheckedChange={(checked) => {
+                          if (checked === true) {
                             setDeleteList(
-                              products?.map((product) => product.id) || []
+                              filteredProducts.map((p) => p.id)
                             );
+                          } else {
+                            setDeleteList([]);
                           }
                         }}
-                        checked={isAllSelected}
                       />
                     </th>
                     <th className="p-4 text-left font-medium text-sm text-gray-500">
@@ -401,7 +420,8 @@ export default function Products() {
                     <Product
                       key={product.id}
                       product={product as ProductTypes}
-                      checked={isAllSelected}
+                      checked={deleteList.includes(product.id)}
+                      addToDeleteList={addToDeleteList}
                       removeFromDeleteList={removeFromDeleteList}
                     />
                   ))

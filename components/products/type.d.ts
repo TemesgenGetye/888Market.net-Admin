@@ -4,6 +4,8 @@ export default interface ProductTypes {
   description: string;
   price: {
     currency: string;
+    /** Some rows use API typo `orignal` or `amount` instead of `original` */
+    original?: number;
     amount?: number;
     orignal?: number;
     discounted?: number;

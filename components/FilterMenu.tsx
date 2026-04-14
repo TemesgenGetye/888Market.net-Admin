@@ -47,6 +47,7 @@ export default function FilterMenu({
 
   type SectionKey =
     | "status"
+    | "productSource"
     | "category"
     | "subcategory"
     | "stockLevel"
@@ -56,10 +57,16 @@ export default function FilterMenu({
     Record<SectionKey, boolean>
   >({
     status: true,
+    productSource: false,
     category: false,
     subcategory: false,
     stockLevel: false,
     price: false,
+  });
+
+  const [productSourceFilters, setProductSourceFilters] = useState({
+    own: false,
+    customer: false,
   });
 
   // Only one section can be expanded at a time
@@ -67,6 +74,7 @@ export default function FilterMenu({
     setExpandedSections((prev) => {
       const newState: Record<SectionKey, boolean> = {
         status: false,
+        productSource: false,
         category: false,
         subcategory: false,
         stockLevel: false,
@@ -101,6 +109,10 @@ export default function FilterMenu({
     setStockLevelFilters((prev) => ({ ...prev, [level]: checked }));
   };
 
+  const handleProductSourceChange = (key: "own" | "customer", checked: boolean) => {
+    setProductSourceFilters((prev) => ({ ...prev, [key]: checked }));
+  };
+
   const handleApply = () => {
     const filters = {
       status: Object.entries(statusFilters)
@@ -115,6 +127,9 @@ export default function FilterMenu({
       stockLevels: Object.entries(stockLevelFilters)
         .filter(([_, checked]) => checked)
         .map(([level]) => level),
+      productSource: Object.entries(productSourceFilters)
+        .filter(([_, checked]) => checked)
+        .map(([key]) => key),
       priceRange,
     };
     onApply?.(filters);
@@ -172,6 +187,56 @@ export default function FilterMenu({
                   </Label>
                 </div>
               ))}
+            </CollapsibleContent>
+          </Collapsible>
+          {/* Own vs customer products */}
+          <Collapsible
+            open={expandedSections.productSource}
+            onOpenChange={() => toggleSection("productSource")}
+          >
+            <CollapsibleTrigger className="flex items-center justify-between w-full py-3 text-left border-t border-gray-100">
+              <span className="text-sm font-medium text-gray-900">
+                Product source
+              </span>
+              {expandedSections.productSource ? (
+                <ChevronDown className="w-5 h-5 text-gray-500" />
+              ) : (
+                <ChevronRight className="w-5 h-5 text-gray-500" />
+              )}
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pb-4">
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="product-source-own"
+                  checked={productSourceFilters.own}
+                  onCheckedChange={(checked) =>
+                    handleProductSourceChange("own", checked as boolean)
+                  }
+                  className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                />
+                <Label
+                  htmlFor="product-source-own"
+                  className="text-gray-700"
+                >
+                  Own products
+                </Label>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id="product-source-customer"
+                  checked={productSourceFilters.customer}
+                  onCheckedChange={(checked) =>
+                    handleProductSourceChange("customer", checked as boolean)
+                  }
+                  className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                />
+                <Label
+                  htmlFor="product-source-customer"
+                  className="text-gray-700"
+                >
+                  Customer products
+                </Label>
+              </div>
             </CollapsibleContent>
           </Collapsible>
           {/* Category Filter */}
@@ -385,6 +450,7 @@ export default function FilterMenu({
                 medium: false,
                 low: true,
               });
+              setProductSourceFilters({ own: false, customer: false });
               setPriceRange([0, 1000]);
               onApply?.(null);
             }}
